@@ -1,0 +1,12 @@
+Package: RTutorClicker
+Type: Package
+Title: Clicker support for RTutor presentations
+Version: 0.1.0
+Author: Sebastian Kranz
+Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>
+Description: Clicker support for RTutor presentations
+License: GPL >= 2.0
+LazyData: TRUE
+Depends:
+  restorepoint, shinyEvents, stringtools, rmdtools, yaml,
+  shinyEventsUI, shinydashboard, highcharter, shinyEventsLogin

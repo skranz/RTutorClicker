@@ -31,13 +31,28 @@ rt.clicker.quiz.init.task.state = function(ts, task.ind=ts$task.ind, ups=NULL,op
 
   ts$cs = as.environment(list(clicker.dir = opts$clicker.dir, courseid=opts$courseid))
   ts$ct = as.environment(ts$wid$ct)
+  ts$ct$wid = ts$wid
   ts$ct$courseid = opts$courseid
+  ts$ct$clicker.dir = ts$cs$clicker.dir
+
+
   return(ts)
 }
 
 rt.clicker.quiz.ui = function(ts, wid=ts$wid, ...) {
   restore.point("rt.clicker.quiz.ui")
   wid$ui
+}
+
+update.result.clicker.tags = function(qu,ct, app=getApp(), selected="none") {
+  restore.point("update.result.clicker.tags")
+
+  tags = get.clicker.tags(clicker.dir=ct$clicker.dir, ct=ct)
+  tags.li = as.list(c("none", "latest", "all",tags))
+  names(tags.li) = unlist(tags.li)
+
+  updateSelectizeInput(app$session,inputId = qu$ns("resultsRunSelect"), choices=tags.li,selected = selected)
+
 }
 
 rt.clicker.quiz.init.handlers = function(wid=ts$wid,ps=get.ps(), app=getApp(),ts=NULL,opts=ps$opts,...) {
@@ -55,15 +70,27 @@ rt.clicker.quiz.init.handlers = function(wid=ts$wid,ps=get.ps(), app=getApp(),ts
 
   qu = wid
   cs = ts$cs
-  buttonHandler(qu$clickerBtnId,function(...) {
+  ct = ts$ct
+  buttonHandler(qu$ns("startClickerBtn"),function(...) {
     rt.clicker.send(ts=ts,wid=wid,opts=opts)
   })
-  buttonHandler(qu$stopBtnId,function(...) {
-    stop.in.sec = as.integer(getInputValue(qu$stopInputId))
+  buttonHandler(qu$ns("stopClickerBtn"),function(...) {
+    stop.in.sec = as.integer(getInputValue(qu$ns("stopClickerBtn")))
     restore.point("rt.clicker.stopBtnHandler")
 
     if (is.na(stop.in.sec)) stop.in.sec=3
     cs$stop.time = as.integer(Sys.time()) + stop.in.sec
+  })
+
+  update.result.clicker.tags(qu=qu,ct=ct)
+
+  selectChangeHandler(id = qu$ns("resultsRunSelect"),ct=ct,fun=function(id,value,ct,qu,...) {
+    args = list(...)
+    #value = getInputValue(id)
+    restore.point("resultsRundSelectChange")
+    show.task.results(ct=ct, clicker.tag=value)
+
+    cat("\nresultsSelectClick")
   })
 
   # set course running for clicker
@@ -101,9 +128,9 @@ rt.clicker.start.task.observer = function(ts=NULL, cs=ts$cs, wid=ts$wid,ct=ts$ct
     app=getApp()
     restore.point("task.observer")
 
-    dir = file.path(cs$clicker.dir, "sub",ct$courseid, ct$task.id)
+    dir = file.path(cs$clicker.dir, "sub",ct$courseid, ct$task.id, ct$clicker.tag)
     files = list.files(dir)
-    cs$num.sub = max(0,length(files)-1)
+    cs$num.sub = max(0,length(files))
     if (!is.null(cs$stop.time)) {
       cs$stop.in.sec = round(cs$stop.time - as.integer(Sys.time()))
       cs$stopped = cs$stop.in.sec < 0
@@ -115,7 +142,7 @@ rt.clicker.start.task.observer = function(ts=NULL, cs=ts$cs, wid=ts$wid,ct=ts$ct
     } else {
       stop.tag = NULL
     }
-    setUI(wid$numSubUIId,tagList(
+    setUI(wid$ns("numSubUI"),tagList(
       stop.tag,
       p(paste0("Running: ", round(as.integer(Sys.time())-cs$start.time))," sec."),
       p(paste0("Replies: ", cs$num.sub))
@@ -123,15 +150,16 @@ rt.clicker.start.task.observer = function(ts=NULL, cs=ts$cs, wid=ts$wid,ct=ts$ct
     if (!cs$stopped) {
       invalidateLater(1000)
     } else {
-      setUI(wid$numSubUIId,"")
+      setUI(wid$ns("numSubUI"),"")
+      update.result.clicker.tags(qu=wid,ct=ct, selected = "latest")
       rt.show.task.results(ts=ts, wid=wid, cs=cs)
     }
   })
 }
 
-rt.show.task.results = function(ts, wid=ts$wid, cs=ts$cs, app=getApp(),ct = ts$ct,...) {
+rt.show.task.results = function(ts=NULL,ct = ts$ct, app=getApp(),...) {
   restore.point("rt.show.task.results")
-  show.task.results(cs=cs, ct=ts$ct, outputId = wid$resultsUIId, postfix=wid$id)
+  show.task.results(ct=ct)
 }
 
 rt.clicker.quiz.parse = function(inner.txt,type="quiz",name="",id=paste0("quiz_",bi),args=NULL, bdf=NULL, bi=NULL, ps=get.ps(),opts = ps$opts,...) {
@@ -143,28 +171,28 @@ rt.clicker.quiz.parse = function(inner.txt,type="quiz",name="",id=paste0("quiz_"
   }
 
   qu = shinyQuiz(id = id,yaml = merge.lines(inner.txt), bdf = NULL,add.handler = FALSE, whiskers=whiskers, add.check.btn=FALSE)
-
-  qu$clickerBtnId = paste0("clickerBtn_",id)
-  qu$stopBtnId = paste0("stopBtn_",id)
-  qu$stopInputId = paste0("stopInInput_",id)
-  qu$resultsUIId = paste0("resultsUI_",id)
-  qu$numSubUIId = paste0("numSubUIId_",id)
+  qu$ns = NS(id)
 
   stop.in = first.non.null(opts$clicker.stop.in, 5)
   rt.ui = qu$ui
   qu$ui = tagList(
     rt.ui,
     HTML("<table><tr><td>"),
-    smallButton(qu$clickerBtnId,label="Start", extra.style="margin-bottom: 2px;"),
+    smallButton(qu$ns("startClickerBtn"),label="Start", extra.style="margin-bottom: 2px;"),
     HTML("</td><td>"),
-    smallButton(qu$stopBtnId,label="Stop in ",extra.style="margin-bottom: 2px;"),
+    smallButton(qu$ns("stopClickerBtn"),label="Stop in ",extra.style="margin-bottom: 2px;"),
     HTML("</td><td>"),
-    tags$input(id = qu$stopInputId,type = "text", class = "form-control", value = stop.in,style="width: 4em; padding-left: 10px; padding-right: 5px; padding-top: 0; padding-bottom: 0; margin-left: 5px; margin-top:0; margin-bottom: 0; height: 100%;"),
+    tags$input(id = qu$ns("stopInInput"),type = "text", class = "form-control", value = stop.in,style="width: 4em; padding-left: 10px; padding-right: 5px; padding-top: 0; padding-bottom: 0; margin-left: 5px; margin-top:0; margin-bottom: 0; height: 100%;"),
     HTML("</td></tr></table>"),
-    uiOutput(qu$numSubUIId),
+    uiOutput(qu$ns("numSubUI")),
     #uiOutput(qu$resultsUIId)
     bsCollapse(open="Results",
-      slimCollapsePanel("Results", uiOutput(qu$resultsUIId))
+      slimCollapsePanel("Results",
+        uiOutput(qu$ns("resultsUI")),
+        tagList(div(class="StopClickPropagation",
+          selectInput(qu$ns("resultsRunSelect"), label="Results of run", choices=list("latest"="latest", "all"="all"),multiple=FALSE)
+        ))
+      )
     )
   )
   qu$ct = clickerQuiz(id=id,yaml = inner.txt, whiskers=whiskers)

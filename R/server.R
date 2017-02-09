@@ -175,7 +175,7 @@ start.server.task.observer = function(ct=cs$ct,cs=app$cs,app=getApp()) {
     cs = app$cs
     restore.point("task.observer")
 
-    dir = file.path(cs$clicker.dir, "sub",ct$task.id)
+    dir = file.path(cs$clicker.dir, "sub",ct$task.id, ct$clicker.tag)
     files = list.files(dir)
     cs$num.sub = max(0,length(files)-1)
     if (!is.null(cs$stop.time)) {
@@ -222,10 +222,11 @@ clean.clicker.tasks = function(courseid, clicker.dir) {
 
 }
 
-write.clicker.task = function(ct,clicker.dir,file = clicker.task.file.name(ct=ct,cs=cs),courseid=ct$courseid, cs=NULL) {
+write.clicker.task = function(ct,clicker.dir,file = clicker.task.file.name(ct=ct,cs=cs),courseid=ct$courseid, cs=NULL, clicker.tag=make.clicker.tag(clicker.dir=clicker.dir, ct=ct)) {
   restore.point("write.clicker.task")
 
   clean.clicker.tasks(courseid = courseid, clicker.dir=clicker.dir)
+  ct$clicker.tag = clicker.tag
 
   long.file = file.path(clicker.dir,"tasks",file)
   saveRDS(as.list(ct), long.file, compress=FALSE)
@@ -255,4 +256,25 @@ import.yaml.with.source = function(txt=readLines(file, warn=FALSE), file=NULL, s
   })
   li = do.call(c,li)
   li
+}
+
+
+
+get.clicker.tags = function(clicker.dir=ct$clicker.dir, ct=NULL, courseid=ct$courseid, task.id = ct$task.id) {
+  restore.point("get.clicker.tags")
+
+
+  sub.dir = file.path(clicker.dir, "sub", courseid, task.id)
+  if (!dir.exists(sub.dir)) return(NULL)
+
+  dirs = list.dirs(sub.dir,full.names = FALSE,recursive = FALSE)
+  return(dirs)
+}
+
+
+make.clicker.tag = function(clicker.dir, ct=NULL, courseid=ct$courseid, task.id = ct$task.id) {
+  restore.point("make.clicker.tag")
+  dirs = get.clicker.tags(clicker.dir, ct, courseid, task.id)
+  if (is.null(dirs)) return("1")
+  return(as.character(length(dirs)+1))
 }

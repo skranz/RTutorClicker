@@ -227,7 +227,7 @@ clicker.submit = function(values, app=getApp()) {
   # first submission
   if (ct$num.sub==0) {
     dir.create(ct$sub.dir,showWarnings = TRUE,recursive = TRUE)
-    writeLines(paste0(names(vals), collapse=","),file.path(ct$sub.dir,"colnames.csv"))
+    writeLines(paste0(names(vals), collapse=","),file.path(ct$task.sub.dir,"colnames.csv"))
   }
 
   sub.file = file.path(ct$sub.dir, paste0(userid,"_",ct$task.id,".sub"))
@@ -243,7 +243,8 @@ read.task.file = function(file, glob=app$glob, app=getApp()) {
   ct$courseid = first.non.null(ct[["courseid"]],"default")
   ct$file = file
   ct$num.sub = 0
-  ct$sub.dir = file.path(glob$clicker.dir,"sub",ct$courseid, ct$task.id)
+  ct$sub.dir = file.path(glob$clicker.dir,"sub",ct$courseid, ct$task.id, ct$clicker.tag)
+  ct$task.sub.dir = file.path(glob$clicker.dir,"sub",ct$courseid, ct$task.id)
 
   if (isTRUE(ct$type=="quiz")) {
     ct$ui = quiz.ui(ct$qu)

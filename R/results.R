@@ -1,8 +1,8 @@
 
 
-show.task.results = function(cs=app$cs, ct=cs$ct, app=getApp(),outputId = paste0("resultsUI",postfix), postfix="",...) {
-  dat = load.sub.data(cs=cs,ct=ct)
+show.task.results = function(ct, app=getApp(),outputId = NS(ct$qu$id,"resultsUI"),clicker.tag="latest",...) {
   restore.point("show.task.results")
+  dat = load.sub.data(ct=ct, clicker.tag=clicker.tag)
 
   if (is.null(dat)) {
     ui = p("No answers submitted.")
@@ -46,7 +46,8 @@ show.clicker.quiz.sc.results = function(dat, qu,part = qu$parts[[1]], show.sol=T
     }
 
     plot = choices.barplot(values=dat[[var]], choices, answer=answer, choice.labels=choice.labels)
-    plotId = paste0(outputId,"_Plot")
+    # need random string to correctly rerender plot
+    plotId = paste0(outputId,"_Plot_",random.string(nchar=8))
     ui = tagList(
       div(style="height=14em",
         highchartOutput(plotId, height="14em")
@@ -112,7 +113,8 @@ show.clicker.quiz.mc.results = function(dat, qu,part = qu$parts[[1]], show.sol=T
   hc_add_series(data = yes,name = "Yes", color="#2980b9") %>%
   hc_add_series(data = no,name = "No",color="#d35400")
 
-  plotId = paste0(outputId,"_Plot")
+  # need random string to correctly rerender plot
+  plotId = paste0(outputId,"_Plot_",random.string(nchar=8))
   ui = tagList(
     div(style="height=14em",
       highchartOutput(plotId, height="14em")
@@ -174,7 +176,8 @@ show.clicker.quiz.numeric.results = function(dat, qu,part = qu$parts[[1]], show.
   hc_xAxis(categories = lab) %>%
   hc_add_series(data = counts,name="Counts",showInLegend=FALSE)
 
-  plotId = paste0(outputId,"_Plot")
+  # need random string to correctly rerender plot
+  plotId = paste0(outputId,"_Plot_",random.string(nchar=8))
   ui = tagList(
     p("Results from ",NROW(dat)," replies:"),
     div(style="height=14em",
@@ -202,15 +205,43 @@ quiz.results.plot = function(dat, qu,part = qu$parts[[1]]) {
   }
 }
 
+normalize.clicker.tag = function(ct, clicker.tag) {
+  restore.point("normalize.clicker.tag")
 
-load.sub.data = function(cs=app$cs, ct=cs$ct, app=getApp(),...) {
+  if (length(clicker.tag)==0) return(NULL)
+
+  if ("none" %in% clicker.tag) return(NULL)
+
+  if ("all" %in% clicker.tag | "latest" %in% clicker.tag) {
+    dirs = get.clicker.tags(ct=ct)
+    if ("all" %in% clicker.tag) return(dirs)
+    if ("latest" %in% clicker.tag) {
+      nums = na.omit(as.numeric(dirs))
+      if (length(nums)>0) {
+        clicker.tag = union(clicker.tag, as.character(max(nums)))
+      } else {
+        return(NULL)
+      }
+    }
+  }
+  clicker.tag
+
+}
+
+load.sub.data = function(ct, clicker.tag = ct$clicker.tag, app=getApp(),...) {
   restore.point("load.sub.data")
-  dir = file.path(cs$clicker.dir, "sub",ct$courseid, ct$task.id)
-  files = list.files(dir,pattern = glob2rx("*.sub"),full.names = TRUE)
+
+  clicker.tag = normalize.clicker.tag(ct=ct, clicker.tag=clicker.tag)
+
+  if (length(clicker.tag)==0) return(NULL)
+
+  dirs = file.path(ct$clicker.dir, "sub",ct$courseid, ct$task.id, clicker.tag)
+  files = unlist(lapply(dirs, function(dir) list.files(dir,pattern = glob2rx("*.sub"),full.names = TRUE)))
   if (length(files)==0) return(NULL)
 
 
-  header.file = file.path(dir,"colnames.csv")
+
+  header.file = file.path(ct$clicker.dir, "sub",ct$courseid, ct$task.id,"colnames.csv")
   txt = readLines(header.file,warn = FALSE)
   li = unlist(lapply(files, readLines,warn=FALSE))
   txt = c(txt, li)

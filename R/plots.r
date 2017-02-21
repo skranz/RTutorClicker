@@ -1,23 +1,3 @@
-
-quiz.results.plot = function(dat, qu,part = qu$parts[[1]]) {
-  restore.point("quiz.results.plot")
-
-  part = qu$parts[[1]]
-  if (part$type=="sc") {
-    return(quiz.sc.plot(dat=dat,qu=qu,part=part))
-  } else if (part$type=="numeric") {
-    return(quiz.numeric.plot(dat=dat,qu=qu,part=part))
-  }
-}
-
-quiz.sc.plot = function(dat, qu, part = qu$parts[[1]]) {
-  restore.point("quiz.sc.plot")
-  choices = unlist(part$choices)
-
-  var = names(dat)[[3]]
-  choices.barplot(values=dat[[var]], choices)
-}
-
 choices.barplot = function(values, choices=names(counts), counts=NULL,col="#ff8888", axes=FALSE, answer=NULL, colors=clicker.bar.color(choices=choices,answer=answer),choice.labels = choices, ....) {
   restore.point("choices.barplot")
 

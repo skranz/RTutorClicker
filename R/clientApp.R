@@ -171,15 +171,15 @@ clicker.update.client.task = function(ct = app$glob$ct.li[[app$courseid]], app=g
   }
   app$no.clicker.task = FALSE
 
-  if (is.function(ct$init.handler)) {
-    ct$init.handler(ct)
-  } else if (is.character(ct$init.handler)) {
-    do.call(ct$init.handler, list(ct=ct))
+  if (is.function(ct$client.init.handlers)) {
+    ct$client.init.handlers(ct)
+  } else if (is.character(ct$client.init.handlers)) {
+    do.call(ct$client.init.handlers, list(ct=ct))
   }
 
   ui = tagList(
     h4(app$courseid," - ", app$userid),
-    ct$ui
+    ct$client.ui
   )
   setUI(app$glob$mainUI, ui)
 }
@@ -213,8 +213,8 @@ clicker.update.tasks = function(clicker.dir, glob=app$glob, app=getApp(), millis
 }
 
 
-clicker.submit = function(values, app=getApp()) {
-  restore.point("clicker.submit")
+clicker.client.submit = function(values, app=getApp()) {
+  restore.point("clicker.client.submit")
 
   cat("\nclicker.submit")
   glob = app$glob
@@ -246,10 +246,6 @@ read.task.file = function(file, glob=app$glob, app=getApp()) {
   ct$sub.dir = file.path(glob$clicker.dir,"sub",ct$courseid, ct$task.id, ct$clicker.tag)
   ct$task.sub.dir = file.path(glob$clicker.dir,"sub",ct$courseid, ct$task.id)
 
-  if (isTRUE(ct$type=="quiz")) {
-    ct$ui = quiz.ui(ct$qu)
-    ct$init.handler="clicker.quiz.handlers"
-  }
   ct
 }
 

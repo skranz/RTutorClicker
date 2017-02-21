@@ -202,7 +202,7 @@ start.server.task.observer = function(ct=cs$ct,cs=app$cs,app=getApp()) {
   })
 }
 
-clicker.task.file.name = function(ct=NULL,courseid=ct$courseid, base.name = random.string(nchar = 20), cs=NULL) {
+clicker.task.file.name = function(ct=NULL,courseid=ct$courseid, base.name = random.string(nchar = 20)) {
   restore.point("clicker.task.file.name")
 
   file = paste0(courseid,".",base.name)
@@ -222,14 +222,16 @@ clean.clicker.tasks = function(courseid, clicker.dir) {
 
 }
 
-write.clicker.task = function(ct,clicker.dir,file = clicker.task.file.name(ct=ct,cs=cs),courseid=ct$courseid, cs=NULL, clicker.tag=make.clicker.tag(clicker.dir=clicker.dir, ct=ct)) {
+write.clicker.task = function(ct,clicker.dir=ct$clicker.dir,file = clicker.task.file.name(ct=ct),courseid=ct$courseid, clicker.tag=first.non.null(ct[["clicker.tag"]],make.clicker.tag(clicker.dir=clicker.dir, ct=ct))) {
   restore.point("write.clicker.task")
 
   clean.clicker.tasks(courseid = courseid, clicker.dir=clicker.dir)
   ct$clicker.tag = clicker.tag
 
   long.file = file.path(clicker.dir,"tasks",file)
-  saveRDS(as.list(ct), long.file, compress=FALSE)
+  ct = as.list(ct)
+  saveRDS(ct, long.file, compress=FALSE)
+  invisible(ct)
 }
 
 import.yaml.with.source = function(txt=readLines(file, warn=FALSE), file=NULL, source.field = "source_text", add.head=TRUE, tab.len=2) {
@@ -272,8 +274,10 @@ get.clicker.tags = function(clicker.dir=ct$clicker.dir, ct=NULL, courseid=ct$cou
 }
 
 
-make.clicker.tag = function(clicker.dir, ct=NULL, courseid=ct$courseid, task.id = ct$task.id) {
+make.clicker.tag = function(clicker.dir=ct$clicker.dir, courseid=ct$courseid, task.id = ct$task.id,ct=NULL) {
   restore.point("make.clicker.tag")
+
+
   dirs = get.clicker.tags(clicker.dir, ct, courseid, task.id)
   if (is.null(dirs)) return("1")
   return(as.character(length(dirs)+1))
